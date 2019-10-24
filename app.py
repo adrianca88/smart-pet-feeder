@@ -1,45 +1,82 @@
 #!/usr/bin/env python3
-import RPi.GPIO as GPIO
+
 import time
-import picamera
+import logging
+import configparser
+import io
+import requests
+#import picamera
+#import RPi.GPIO as GPIO
 
-GPIO.setwarnings(True)
-GPIO.setmode(GPIO.BOARD)
-
-# PIR
 PIR_PIN = 7
-GPIO.setup(PIR_PIN, GPIO.IN)
+STEPPER_PINS = [31, 33, 35, 37]
 
-# MOTOR
-STEPPER_PINS = [31,33,35,37]
+#  Vars
+#picam = picamera.PiCamera()
+config = configparser.ConfigParser()
 
-for pin in STEPPER_PINS:
-    GPIO.setup(pin, GPIO.OUT)
-    GPIO.output(pin, 0)
+def config_gpio():
+    logging.info("GPIO configuration")
+    #GPIO.setwarnings(True)
+    #GPIO.setmode(GPIO.BOARD)
 
-# CAMERA
-picam = picamera.PiCamera()
+def config_pir():
+    logging.info("PIR configuration")
+    #GPIO.setup(PIR_PIN, GPIO.IN)
+    #GPIO.add_event_detect(PIR_PIN, GPIO.RISING, callback=motion_detected)
 
-# CODE
-def _get_image():
-    picam.start_preview()
-    time.sleep(1)
-    picam.capture('test.jpg')
-    picam.stop_preview()
-    picam.close()
+def config_motor():
+    logging.info("Motor configuration")
+    #for pin in STEPPER_PINS:
+    #    GPIO.setup(pin, GPIO.OUT)
+    #    GPIO.output(pin, 0)
 
+def get_image():
+    logging.info("Getting image...")
+    #picam.start_preview()
+    time.sleep(2)  # warmup camera
+    my_stream = io.BytesIO()
+    #picam.capture(my_stream, 'jpeg')
+    #picam.stop_preview()
+    logging.info("Image data ready.")
+    return my_stream
 
-def MOTION(PIR_PIN):
-    print ("Motion Detected!")
+def process_image(img_data):
+    logging.info("Processing image...")
+    # Request
+    headers = {'Content-Type': 'application/octet-stream', 'Ocp-Apim-Subscription-Key': config["AZURE"]["api_key"]}
+    params = {'visualFeatures': 'Categories,Description'}
+    response = requests.post(url=config["AZURE"]["server"], headers=headers, params=params, data=img_data)
+    # Process return value
+    logging.info("Response code = %d", response.status_code)
+    if response.status_code == 200:
+        logging.debug(response.text)
+        json_res = response.json()
+        tags = json_res["description"]["tags"]
+        if config["DEFAULT"]["animal_detect"] in tags:
+            return True
+    return False
+
+def motion_detected(gpio_pin):
+    logging.info("Motion Detected!")
+
+#  Main
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(filename)s (%(lineno)d): %(message)s', level=logging.DEBUG)
+config.read('app.ini')
+
+#data = open('atari.jpg', 'rb').read()
+#process_image(data)
 
 try:
-    print("Starting PIR test app")
-    GPIO.add_event_detect(PIR_PIN, GPIO.RISING, callback=MOTION)
+    logging.info("SmartFeederApp started")
     while 1:
-        time.sleep(100)
+        time.sleep(1)
+        logging.debug("Waiting...")
 except KeyboardInterrupt:
-        print("Bye!")
-        GPIO.cleanup()
+        logging.info("Closing...")
+        #GPIO.cleanup()
+        # picam.close()
+        logging.info("Bye")
 
 
 #while True:
