@@ -26,14 +26,14 @@ def close():
         for halfstep in range(8):
             for pin in range(4):
                 GPIO.output(control_pins[pin], halfstep_seq[halfstep][pin])
-            time.sleep(0.01)
+            time.sleep(0.0025)
 
 def open():
     for i in range(96):
         for halfstep in range(8):
             for pin in range(4):
                 GPIO.output(control_pins[pin], halfstep_seq[7-halfstep][pin])
-            time.sleep(0.01)
+            time.sleep(0.0025)
 
 close()
 
