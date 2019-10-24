@@ -20,10 +20,25 @@ halfstep_seq = [
   [0,0,0,1],
   [1,0,0,1]
 ]
-for i in range(512):
-    for halfstep in range(8):
-        for pin in range(4):
-            GPIO.output(control_pins[pin], halfstep_seq[halfstep][pin])
-        time.sleep(0.001)
+
+def close():
+    for i in range(96):
+        for halfstep in range(8):
+            for pin in range(4):
+                GPIO.output(control_pins[pin], halfstep_seq[halfstep][pin])
+            time.sleep(0.01)
+
+def open():
+    for i in range(96):
+        for halfstep in range(8):
+            for pin in range(4):
+                GPIO.output(control_pins[pin], halfstep_seq[7-halfstep][pin])
+            time.sleep(0.01)
+
+close()
+
+time.sleep(2)
+
+open()
 
 GPIO.cleanup()
